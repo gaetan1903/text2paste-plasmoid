@@ -1,0 +1,19 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Email": "gaetan.s118@gmail.com",
+                "Name": "Gaetan Jonathan"
+            }
+        ],
+        "Category": "Utilities",
+        "Description": "A widget to show quickly text to copy such as tokoen, password or code you need frequently",
+        "Icon": "note",
+        "Id": "com.github.gaetan1903.text2paste",
+        "Name": "Texte2Paste",
+        "Version": "1",
+        "Website": "https://github.com/gaetan1903/text2paste-plasmoid"
+    },
+    "KPackageStructure": "Plasma/Applet",
+    "X-Plasma-API-Minimum-Version": "6.0"
+}
