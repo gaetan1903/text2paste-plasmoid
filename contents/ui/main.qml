@@ -1,20 +1,34 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
-import org.kde.plasma.core as PlasmaCore
 import org.kde.plasma.plasmoid
 import org.kde.plasma.components as PlasmaComponents
 import org.kde.kirigami as Kirigami
+import org.kde.plasma.plasma5support as Plasma5Support
 
 PlasmoidItem {
     id: root
 
     property var sourceText: Plasmoid.configuration.snippets || []
     property var visibleSecrets: ({})
+    property string searchQuery: ""
 
-    // Ensure changes are synced back to configuration
+    // Sync changes back to configuration
     onSourceTextChanged: {
         Plasmoid.configuration.snippets = sourceText;
+    }
+
+
+    Plasma5Support.DataSource {
+        id: executable
+        engine: "executable"
+        connectedSources: []
+        onNewData: function(sourceName, data) {
+            disconnectSource(sourceName);
+        }
+        function exec(cmd) {
+            connectSource(cmd);
+        }
     }
 
     // Helper functions
@@ -34,14 +48,12 @@ PlasmoidItem {
 
     function addSnippet(label, value) {
         if (value === "") return;
-
         let entry = label !== "" ? (label + ":" + value) : value;
         if (sourceText.indexOf(entry) !== -1) return;
 
         let newList = [...sourceText];
         newList.push(entry);
         sourceText = newList;
-
         root.visibleSecrets = {};
     }
 
@@ -55,6 +67,15 @@ PlasmoidItem {
         }
     }
 
+    function moveSnippet(fromIndex, toIndex) {
+        if (toIndex < 0 || toIndex >= sourceText.length) return;
+        let newList = [...sourceText];
+        let element = newList.splice(fromIndex, 1)[0];
+        newList.splice(toIndex, 0, element);
+        sourceText = newList;
+        root.visibleSecrets = {};
+    }
+
     function copyToClipboard(text) {
         tempCopyPasteField.text = text;
         tempCopyPasteField.selectAll();
@@ -62,17 +83,14 @@ PlasmoidItem {
         tempCopyPasteField.text = "";
     }
 
-    // This field is used as a workaround for clipboard access
     Controls.TextField {
         id: tempCopyPasteField
         visible: false
     }
 
-    // Icon representation when in a panel
     compactRepresentation: MouseArea {
         anchors.fill: parent
         onClicked: root.expanded = !root.expanded
-
         Kirigami.Icon {
             anchors.fill: parent
             anchors.margins: Kirigami.Units.smallSpacing
@@ -80,11 +98,29 @@ PlasmoidItem {
         }
     }
 
-    // Full UI representation
     fullRepresentation: ColumnLayout {
-        Layout.preferredWidth: Kirigami.Units.gridUnit * 25
-        Layout.preferredHeight: Kirigami.Units.gridUnit * 20
+        Layout.preferredWidth: Kirigami.Units.gridUnit * 28
+        Layout.preferredHeight: Kirigami.Units.gridUnit * 25
         spacing: Kirigami.Units.smallSpacing
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 0
+            PlasmaComponents.TextField {
+                id: searchInput
+                Layout.fillWidth: true
+                placeholderText: qsTr("Search...")
+                onTextChanged: root.searchQuery = text.toLowerCase()
+            }
+            PlasmaComponents.ToolButton {
+                icon.name: "edit-clear"
+                visible: root.searchQuery !== ""
+                onClicked: {
+                    searchInput.text = "";
+                    root.searchQuery = "";
+                }
+            }
+        }
 
         Controls.ScrollView {
             Layout.fillWidth: true
@@ -98,25 +134,50 @@ PlasmoidItem {
 
                 delegate: PlasmaComponents.ItemDelegate {
                     width: listView.width
+                    visible: {
+                        if (root.searchQuery === "") return true;
+                        let label = root.getLabel(modelData).toLowerCase();
+                        let value = root.getValue(modelData).toLowerCase();
+                        return label.includes(root.searchQuery) || value.includes(root.searchQuery);
+                    }
+                    height: visible ? undefined : 0
 
                     contentItem: RowLayout {
                         id: delegateLayout
                         spacing: Kirigami.Units.smallSpacing
-
                         property string currentSnippet: modelData || ""
                         property bool isVisible: !!root.visibleSecrets[index]
 
                         ColumnLayout {
+                            spacing: 2
+                            visible: root.searchQuery === ""
+                            PlasmaComponents.ToolButton {
+                                icon.name: "arrow-up"
+                                icon.width: Kirigami.Units.gridUnit * 0.6
+                                Layout.preferredHeight: Kirigami.Units.gridUnit
+                                flat: true
+                                enabled: index > 0
+                                onClicked: root.moveSnippet(index, index - 1)
+                            }
+                            PlasmaComponents.ToolButton {
+                                icon.name: "arrow-down"
+                                icon.width: Kirigami.Units.gridUnit * 0.6
+                                Layout.preferredHeight: Kirigami.Units.gridUnit
+                                flat: true
+                                enabled: index < listView.count - 1
+                                onClicked: root.moveSnippet(index, index + 1)
+                            }
+                        }
+
+                        ColumnLayout {
                             Layout.fillWidth: true
                             spacing: 0
-
                             PlasmaComponents.Label {
                                 text: root.getLabel(delegateLayout.currentSnippet)
                                 Layout.fillWidth: true
                                 elide: Text.ElideRight
                                 font.bold: true
                             }
-
                             PlasmaComponents.Label {
                                 text: delegateLayout.isVisible ? root.getValue(delegateLayout.currentSnippet) : "••••••••"
                                 Layout.fillWidth: true
@@ -127,40 +188,40 @@ PlasmoidItem {
                             }
                         }
 
-                        // Toggle visibility
-                        PlasmaComponents.ToolButton {
-                            icon.name: delegateLayout.isVisible ? "visibility" : "hint"
-                            onClicked: {
-                                let newVisible = Object.assign({}, root.visibleSecrets);
-                                newVisible[index] = !newVisible[index];
-                                root.visibleSecrets = newVisible;
-                            }
-                        }
-
-                        // Copy Button
-                        PlasmaComponents.ToolButton {
-                            id: copyButton
-                            icon.name: "edit-copy"
-                            onClicked: {
-                                let val = root.getValue(delegateLayout.currentSnippet);
-                                if (val !== "") {
-                                    root.copyToClipboard(val);
-                                    copyButton.icon.name = "emblem-success-symbolic";
-                                    resetIconTimer.start();
+                        RowLayout {
+                            spacing: 0
+                            PlasmaComponents.ToolButton {
+                                icon.name: delegateLayout.isVisible ? "visibility" : "hint"
+                                onClicked: {
+                                    let newVisible = Object.assign({}, root.visibleSecrets);
+                                    newVisible[index] = !newVisible[index];
+                                    root.visibleSecrets = newVisible;
                                 }
                             }
-
-                            Timer {
-                                id: resetIconTimer
-                                interval: 2000
-                                onTriggered: copyButton.icon.name = "edit-copy"
+                            PlasmaComponents.ToolButton {
+                                id: copyButton
+                                icon.name: "edit-copy"
+                                onClicked: {
+                                    let val = root.getValue(delegateLayout.currentSnippet);
+                                    if (val !== "") {
+                                        root.copyToClipboard(val);
+                                        copyButton.icon.name = "emblem-success-symbolic";
+                                        resetIconTimer.start();
+                                    }
+                                }
+                                Timer { id: resetIconTimer; interval: 2000; onTriggered: copyButton.icon.name = "edit-copy" }
                             }
-                        }
-
-                        // Delete Button
-                        PlasmaComponents.ToolButton {
-                            icon.name: "edit-delete"
-                            onClicked: root.removeText(delegateLayout.currentSnippet)
+                            PlasmaComponents.ToolButton {
+                                icon.name: "system-run"
+                                onClicked: {
+                                    let val = root.getValue(delegateLayout.currentSnippet);
+                                    if (val !== "") executable.exec(val);
+                                }
+                            }
+                            PlasmaComponents.ToolButton {
+                                icon.name: "edit-delete"
+                                onClicked: root.removeText(delegateLayout.currentSnippet)
+                            }
                         }
                     }
                 }
@@ -172,13 +233,13 @@ PlasmoidItem {
         GridLayout {
             columns: 3
             Layout.fillWidth: true
+            visible: root.searchQuery === ""
 
             PlasmaComponents.TextField {
                 id: labelInput
                 Layout.fillWidth: true
                 placeholderText: qsTr("Label...")
             }
-
             PlasmaComponents.TextField {
                 id: textInput
                 Layout.fillWidth: true
@@ -189,7 +250,6 @@ PlasmoidItem {
                     textInput.text = "";
                 }
             }
-
             PlasmaComponents.Button {
                 icon.name: "list-add"
                 onClicked: {

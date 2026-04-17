@@ -45,13 +45,14 @@ plasmoidviewer -a com.github.gaetan1903.text2paste
 - [x] **Visual Feedback**: Show a success icon when an item is successfully copied to the clipboard.
 - [x] **Privacy Mode**: Mask sensitive snippets (passwords, tokens) with dots and provide a toggle to reveal them.
 - [x] **Input Validation**: Prevent adding empty strings or duplicate entries.
-
-### Phase 2: Feature Expansion
-- [x] **Labels/Aliases**: Allow users to give a "Name" to a snippet (e.g., "Prod Token") instead of showing the full raw text.
-- [ ] **Reordering**: Drag-and-drop support to reorder the list of snippets.
-- [ ] **Search/Filter**: Add a search bar for users with many saved snippets.
-
-### Phase 3: Integration & Advanced Options
+- [x] **Command Runner**: Execute snippets directly as system commands (e.g., for restarting services or launching apps).
+ 
+ ### Phase 2: Feature Expansion
+ - [x] **Labels/Aliases**: Allow users to give a "Name" to a snippet (e.g., "Prod Token") instead of showing the full raw text.
+ - [x] **Reordering**: Move snippets up and down to organize your list.
+ - [x] **Search/Filter**: Quickly find snippets using the built-in search bar.
+ 
+ ### Phase 3: Integration & Advanced Options
 - [ ] **Categorization**: Group snippets into categories or tabs.
 - [ ] **Import/Export**: Allow backup and restoration of the snippet list.
 - [ ] **Global Shortcuts**: Assign specific shortcuts to copy specific items from the list.

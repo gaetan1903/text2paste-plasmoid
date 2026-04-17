@@ -7,11 +7,11 @@
       }
     ],
     "Category": "Utilities",
-    "Description": "A widget to show quickly text to copy such as tokoen, password or code you need frequently",
+    "Description": "A Plasma 6 widget to store, search, and quickly copy snippets like tokens, passwords, or commands to your clipboard — or run them directly.",
     "Icon": "note",
     "Id": "com.github.gaetan1903.text2paste",
     "Name": "Text2Paste",
-    "Version": "1.1",
+    "Version": "1.2",
     "Website": "https://github.com/gaetan1903/text2paste-plasmoid"
   },
   "KPackageStructure": "Plasma/Applet",
